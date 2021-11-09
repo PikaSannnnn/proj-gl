@@ -59,8 +59,14 @@ void render(driver_state& state, render_type type)
             break;
         case render_type::strip:
             break;
-        
     }
+
+    // delete [] g_data;
+    for (int i = 0; i < state.num_vertices; i++) {
+        delete g_data[i].data;
+    }
+
+    delete [] g_data;
 }
 
 
