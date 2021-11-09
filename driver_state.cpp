@@ -93,7 +93,7 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
     const data_geometry& v1, const data_geometry& v2)
 {
     // rasterizes a SINGLE triangle
-    std::cout<<"TODO: implement rasterization"<<std::endl;
+    // std::cout<<"TODO: implement rasterization"<<std::endl;
     vec4 A(
                 v0.gl_Position[0] / v0.gl_Position[3],
                 v0.gl_Position[1] / v0.gl_Position[3],
