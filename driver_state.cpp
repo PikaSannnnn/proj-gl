@@ -153,7 +153,21 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
             gamma /= Tri_Area;
 
             if (alpha >= 0 && beta >= 0 && gamma >= 0) {
-                state.image_color[i + (j * state.image_width)] = make_pixel(255, 255, 255); 
+                data_fragment f_data;   // store fragment data (same as data_vertex, just let the function do the work)
+                data_output out_data;   // vec4 of rgb (determined by fragment_shader)
+                
+                state.fragment_shader(f_data, out_data, state.uniform_data);
+                switch(state.interp_rules[0]) {  // for the color mixes
+                    case interp_type::flat:
+                        break;
+                    case interp_type::smooth:
+                        break;
+                    case interp_type::noperspective:
+                        break;
+                }
+                state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
+                                                                            out_data.output_color[1] * 255, 
+                                                                            out_data.output_color[2] * 255);
             }
         }
     }
