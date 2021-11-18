@@ -155,19 +155,31 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
             if (alpha >= 0 && beta >= 0 && gamma >= 0) {
                 data_fragment f_data;   // store fragment data (same as data_vertex, just let the function do the work)
                 data_output out_data;   // vec4 of rgb (determined by fragment_shader)
-                
+                f_data.data = new float[MAX_FLOATS_PER_VERTEX];
+
                 state.fragment_shader(f_data, out_data, state.uniform_data);
-                switch(state.interp_rules[0]) {  // for the color mixes
-                    case interp_type::flat:
-                        break;
-                    case interp_type::smooth:
-                        break;
-                    case interp_type::noperspective:
-                        break;
+                float r = out_data.output_color[0], g = out_data.output_color[1], b = out_data.output_color[2];
+
+                if (state.floats_per_vertex > 3) {
+                    switch(state.interp_rules[3]) {  // for the color mixes
+                        case interp_type::flat:
+                            // test 07
+                            r = v0.data[3];
+                            g = v0.data[4];
+                            b = v0.data[5];
+
+                            break;
+                        case interp_type::smooth:
+                            break;
+                        case interp_type::noperspective:
+                            // test 08
+                            break;
+                    }
                 }
-                state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
-                                                                            out_data.output_color[1] * 255, 
-                                                                            out_data.output_color[2] * 255);
+                state.image_color[i + (j * state.image_width)] = make_pixel(r * 255, g * 255, b * 255);
+                // state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
+                //                                                             out_data.output_color[1] * 255, 
+                //                                                             out_data.output_color[2] * 255);
             }
         }
     }
