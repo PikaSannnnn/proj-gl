@@ -161,21 +161,36 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                 float r = out_data.output_color[0], g = out_data.output_color[1], b = out_data.output_color[2];
 
                 if (state.floats_per_vertex > 3) {
+
                     switch(state.interp_rules[3]) {  // for the color mixes
                         case interp_type::flat:
                             // test 07
                             r = v0.data[3];
                             g = v0.data[4];
                             b = v0.data[5];
+                            break;
+                        case interp_type::smooth:   // perspective correct interpolation. need k and w
+                            // Denomenator of eq. for perspective correct barycentric: a'/w_a + b'/w_b + c'/w_c
+                            double bay_w = (alpha / v0.gl_Position[3]) + (beta / v1.gl_Position[3]) + (gamma / v2.gl_Position[3]);  
+                           
+                            // Calculating correct alpha, beta, gamma: x'/w_x / (a'/w_a + b'/w_b + c'/w_c)
+                            alpha = (alpha / v0.gl_Position[3]) / bay_w;
+                            beta = (beta / v1.gl_Position[3]) / bay_w;
+                            gamma = (gamma / v2.gl_Position[3]) / bay_w;
 
+                            // apply barycentric with perspective correct alpha, beta, gamma
+                            r = v0.data[3] * alpha + v1.data[3] * beta + v2.data[3] * gamma;
+                            g = v0.data[4] * alpha + v1.data[4] * beta + v2.data[4] * gamma;
+                            b = v0.data[5] * alpha + v1.data[5] * beta + v2.data[5] * gamma;
                             break;
-                        case interp_type::smooth:
-                            break;
-                        case interp_type::noperspective:
-                            // test 08
+                        case interp_type::noperspective:    // nonperspective barycentric for interpolation
+                            r = v0.data[3] * alpha + v1.data[3] * beta + v2.data[3] * gamma;
+                            g = v0.data[4] * alpha + v1.data[4] * beta + v2.data[4] * gamma;
+                            b = v0.data[5] * alpha + v1.data[5] * beta + v2.data[5] * gamma;
                             break;
                     }
                 }
+                // state.image_color[i + (j * state.image_width)] = make_pixel(r, g, b);
                 state.image_color[i + (j * state.image_width)] = make_pixel(r * 255, g * 255, b * 255);
                 // state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
                 //                                                             out_data.output_color[1] * 255, 
