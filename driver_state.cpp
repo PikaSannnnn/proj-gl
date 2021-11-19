@@ -161,7 +161,8 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                 float r = out_data.output_color[0], g = out_data.output_color[1], b = out_data.output_color[2];
 
                 if (state.floats_per_vertex > 3) {
-
+                    // Denomenator of eq. for perspective correct barycentric: a'/w_a + b'/w_b + c'/w_c
+                    double bay_w = (alpha / v0.gl_Position[3]) + (beta / v1.gl_Position[3]) + (gamma / v2.gl_Position[3]);  
                     switch(state.interp_rules[3]) {  // for the color mixes
                         case interp_type::flat:
                             // test 07
@@ -170,8 +171,6 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                             b = v0.data[5];
                             break;
                         case interp_type::smooth:   // perspective correct interpolation. need k and w
-                            // Denomenator of eq. for perspective correct barycentric: a'/w_a + b'/w_b + c'/w_c
-                            double bay_w = (alpha / v0.gl_Position[3]) + (beta / v1.gl_Position[3]) + (gamma / v2.gl_Position[3]);  
                            
                             // Calculating correct alpha, beta, gamma: x'/w_x / (a'/w_a + b'/w_b + c'/w_c)
                             alpha = (alpha / v0.gl_Position[3]) / bay_w;
