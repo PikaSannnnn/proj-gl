@@ -1,5 +1,6 @@
 #include "driver_state.h"
 #include <cstring>
+#include <limits>
 
 driver_state::driver_state()
 {
@@ -23,9 +24,11 @@ void initialize_render(driver_state& state, int width, int height)
 
     int numEntries = width * height;
     state.image_color = new pixel[numEntries];
+    state.image_depth = new float[numEntries];
     for (int i = 0; i < numEntries; i++) {
         pixel newPix = make_pixel(0,0,0);
         state.image_color[i] = newPix;
+        state.image_depth[i] = INFINITY;
     }
 }
 
@@ -94,11 +97,12 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
 {
     // rasterizes a SINGLE triangle
     // std::cout<<"TODO: implement rasterization"<<std::endl;
+    // Vertex Positions
     vec4 A(
-                v0.gl_Position[0] / v0.gl_Position[3],
-                v0.gl_Position[1] / v0.gl_Position[3],
-                v0.gl_Position[2] / v0.gl_Position[3],
-                v0.gl_Position[3]
+                v0.gl_Position[0] / v0.gl_Position[3],  // X
+                v0.gl_Position[1] / v0.gl_Position[3],  // Y
+                v0.gl_Position[2] / v0.gl_Position[3],  // Z
+                v0.gl_Position[3]                       // W
                 );
     vec4 B(
                 v1.gl_Position[0] / v1.gl_Position[3],
@@ -132,6 +136,7 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
 
     for (int i = 0; i < state.image_width; i++) {
         for (int j = 0; j < state.image_height; j++) {
+            
             alpha = 0.5 * (
                             (B[0] * C[1] - C[0] * B[1]) +   // B_x * C_y - C_x * B_y
                             (C[0] * j - i * C[1]) +         // C_x * P_y - P_x * C_y
@@ -152,7 +157,7 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
             beta /= Tri_Area;
             gamma /= Tri_Area;
 
-            if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+            if (alpha >= -0.001 && beta >= -0.001 && gamma >= -0.001) {
                 data_fragment f_data;   // store fragment data (same as data_vertex, just let the function do the work)
                 data_output out_data;   // vec4 of rgb (determined by fragment_shader)
                 f_data.data = new float[MAX_FLOATS_PER_VERTEX];
@@ -160,9 +165,12 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                 state.fragment_shader(f_data, out_data, state.uniform_data);
                 float r = out_data.output_color[0], g = out_data.output_color[1], b = out_data.output_color[2];
 
+                float temp_depth = alpha * A[2] + beta * B[2] + gamma * C[2];
+
                 if (state.floats_per_vertex > 3) {
                     // Denomenator of eq. for perspective correct barycentric: a'/w_a + b'/w_b + c'/w_c
-                    double bay_w = (alpha / v0.gl_Position[3]) + (beta / v1.gl_Position[3]) + (gamma / v2.gl_Position[3]);  
+                    double bay_w = (alpha / A[3]) + (beta / B[3]) + (gamma / C[3]);  
+                    
                     switch(state.interp_rules[3]) {  // for the color mixes
                         case interp_type::flat:
                             // test 07
@@ -173,9 +181,9 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                         case interp_type::smooth:   // perspective correct interpolation. need k and w
                            
                             // Calculating correct alpha, beta, gamma: x'/w_x / (a'/w_a + b'/w_b + c'/w_c)
-                            alpha = (alpha / v0.gl_Position[3]) / bay_w;
-                            beta = (beta / v1.gl_Position[3]) / bay_w;
-                            gamma = (gamma / v2.gl_Position[3]) / bay_w;
+                            alpha = (alpha / A[3]) / bay_w;
+                            beta = (beta / B[3]) / bay_w;
+                            gamma = (gamma / C[3]) / bay_w;
 
                             // apply barycentric with perspective correct alpha, beta, gamma
                             r = v0.data[3] * alpha + v1.data[3] * beta + v2.data[3] * gamma;
@@ -189,11 +197,14 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                             break;
                     }
                 }
-                // state.image_color[i + (j * state.image_width)] = make_pixel(r, g, b);
-                state.image_color[i + (j * state.image_width)] = make_pixel(r * 255, g * 255, b * 255);
-                // state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
-                //                                                             out_data.output_color[1] * 255, 
-                //                                                             out_data.output_color[2] * 255);
+                if (temp_depth < state.image_depth[i + (j * state.image_width)]) {
+                    state.image_depth[i + (j * state.image_width)] = temp_depth;
+                    state.image_color[i + (j * state.image_width)] = make_pixel(r * 255, g * 255, b * 255);
+                    // state.image_color[i + (j * state.image_width)] = make_pixel(r, g, b);
+                    // state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
+                    //                                                             out_data.output_color[1] * 255, 
+                    //                                                             out_data.output_color[2] * 255);
+                }
             }
         }
     }
