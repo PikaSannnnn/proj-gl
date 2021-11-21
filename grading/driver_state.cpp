@@ -28,7 +28,7 @@ void initialize_render(driver_state& state, int width, int height)
     for (int i = 0; i < numEntries; i++) {
         pixel newPix = make_pixel(0,0,0);
         state.image_color[i] = newPix;
-        state.image_depth[i] = INFINITY;
+        state.image_depth[i] = std::numeric_limits<float>::max();
     }
 }
 
@@ -136,7 +136,8 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
 
     for (int i = 0; i < state.image_width; i++) {
         for (int j = 0; j < state.image_height; j++) {
-            
+            int pixel_pos = i + (j * state.image_width);
+
             alpha = 0.5 * (
                             (B[0] * C[1] - C[0] * B[1]) +   // B_x * C_y - C_x * B_y
                             (C[0] * j - i * C[1]) +         // C_x * P_y - P_x * C_y
@@ -197,9 +198,9 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                             break;
                     }
                 }
-                if (temp_depth < state.image_depth[i + (j * state.image_width)]) {
-                    state.image_depth[i + (j * state.image_width)] = temp_depth;
-                    state.image_color[i + (j * state.image_width)] = make_pixel(r * 255, g * 255, b * 255);
+                if (temp_depth < state.image_depth[pixel_pos]) {
+                    state.image_depth[pixel_pos] = temp_depth;
+                    state.image_color[pixel_pos] = make_pixel(r * 255, g * 255, b * 255);
                     // state.image_color[i + (j * state.image_width)] = make_pixel(r, g, b);
                     // state.image_color[i + (j * state.image_width)] = make_pixel(out_data.output_color[0] * 255, 
                     //                                                             out_data.output_color[1] * 255, 
