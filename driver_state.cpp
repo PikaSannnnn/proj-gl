@@ -44,21 +44,30 @@ void render(driver_state& state, render_type type)
     data_geometry * g_data = new data_geometry[state.num_vertices];
     for (int i = 0; i < state.num_vertices; i++) {
         g_data[i].gl_Position = vec4(0,0,0,0);
-        g_data[i].data = new float(0.0);    // is this good enough lol
+        g_data[i].data = new float(0.0);
         
-        data_vertex v_data; v_data.data = &state.vertex_data[state.floats_per_vertex * i];
+        data_vertex v_data; 
+        v_data.data = &state.vertex_data[state.floats_per_vertex * i];
         state.vertex_shader(v_data, g_data[i], state.uniform_data);
     }
 
     switch (type) {
         case render_type::triangle:
-            for (int i = 0; i < (state.num_vertices/* * state.floats_per_vertex*/); i += 3) {
-                rasterize_triangle(state, g_data[i], g_data[i+1], g_data[i+2]);
+            for (int i = 0; i < (state.num_vertices); i += 3) {
+                clip_triangle(state, g_data[i], g_data[i+1], g_data [i+2], 0);
             }
             break;
         case render_type::indexed:
+            for (int i = 0; i < (state.num_triangles); i++) {
+                clip_triangle(state, g_data[state.index_data[(i * state.floats_per_vertex)]], 
+                                    g_data[state.index_data[(i * state.floats_per_vertex) + 1]], 
+                                    g_data[state.index_data[(i * state.floats_per_vertex) + 2]], 0);
+            }
             break;
         case render_type::fan:
+            for (int i = 0; i < (state.num_vertices); i += 3) {
+                clip_triangle(state, g_data[i], g_data[i+1], g_data [i+2], 0);
+            }
             break;
         case render_type::strip:
             break;
@@ -85,7 +94,7 @@ void clip_triangle(driver_state& state, const data_geometry& v0,
         rasterize_triangle(state, v0, v1, v2);
         return;
     }
-    std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
+    // std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
     clip_triangle(state,v0,v1,v2,face+1);
 }
 
@@ -166,7 +175,7 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                 state.fragment_shader(f_data, out_data, state.uniform_data);
                 float r = out_data.output_color[0], g = out_data.output_color[1], b = out_data.output_color[2];
 
-                float temp_depth = alpha * A[2] + beta * B[2] + gamma * C[2];
+                float temp_depth = alpha * A[2] + beta * B[2] + gamma * C[2];   // interpolate pixel depth
 
                 if (state.floats_per_vertex > 3) {
                     // Denomenator of eq. for perspective correct barycentric: a'/w_a + b'/w_b + c'/w_c
@@ -198,7 +207,7 @@ void rasterize_triangle(driver_state& state, const data_geometry& v0,
                             break;
                     }
                 }
-                if (temp_depth < state.image_depth[pixel_pos]) {
+                if (temp_depth < state.image_depth[pixel_pos]) {    // if pixel depth closer to cam, render pixel color
                     state.image_depth[pixel_pos] = temp_depth;
                     state.image_color[pixel_pos] = make_pixel(r * 255, g * 255, b * 255);
                     // state.image_color[i + (j * state.image_width)] = make_pixel(r, g, b);
