@@ -65,11 +65,17 @@ void render(driver_state& state, render_type type)
             }
             break;
         case render_type::fan:
-            for (int i = 0; i < (state.num_vertices); i += 3) {
-                clip_triangle(state, g_data[i], g_data[i+1], g_data [i+2], 0);
+            for (int i = 0; i < (state.num_vertices - 2); i++) {
+                clip_triangle(state, g_data[0], g_data[i+1], g_data [i+2], 0);  // g_data[0] anchors at center
             }
             break;
         case render_type::strip:
+            // just need to add 
+            bool oddTri = 1;
+            for (int i = 0; i < (state.num_vertices - 2); i++) {
+                    clip_triangle(state, g_data[i], g_data[i+1], g_data [i+2], 0);
+            }
+
             break;
     }
 
